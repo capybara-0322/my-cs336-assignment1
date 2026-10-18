@@ -10,6 +10,21 @@ from jaxtyping import Bool, Float, Int
 from torch import Tensor
 
 
+# import my own functions
+from cs336_basics.rmsnorm import RMSNorm
+from cs336_basics.train_bpe import train_bpe
+from cs336_basics.tokenizer import Tokenizer
+from cs336_basics.linear import Linear
+from cs336_basics.embedding import Embedding
+from cs336_basics.swiglu import SwiGLU
+from cs336_basics.rope import RotaryPositionalEmbedding
+from cs336_basics.softmax import softmax
+from cs336_basics.attention import scaled_dot_product_attention
+from cs336_basics.multihead_self_attention import MultiheadSelfAttention
+
+
+
+
 def run_linear(
     d_in: int,
     d_out: int,
@@ -29,7 +44,9 @@ def run_linear(
         Float[Tensor, "... d_out"]: The transformed output of your linear module.
     """
 
-    raise NotImplementedError
+
+    linear_model = Linear.from_weight(weights)
+    return linear_model.forward(in_features)
 
 
 def run_embedding(
@@ -51,7 +68,9 @@ def run_embedding(
         Float[Tensor, "... d_model"]: Batch of embeddings returned by your Embedding layer.
     """
 
-    raise NotImplementedError
+    embedding_model = Embedding.from_weight(weights)
+    return embedding_model(token_ids)
+
 
 
 def run_swiglu(
@@ -83,7 +102,17 @@ def run_swiglu(
     # swiglu.w1.weight.data = w1_weight
     # swiglu.w2.weight.data = w2_weight
     # swiglu.w3.weight.data = w3_weight
-    raise NotImplementedError
+
+    swiglu_model = SwiGLU(d_model, d_ff, w1_weight.device, w1_weight.dtype)
+    swiglu_model.load_state_dict({"w1.weight":w1_weight, "w2.weight":w2_weight, "w3.weight":w3_weight})
+
+    return swiglu_model(in_features)
+
+
+
+
+
+
 
 
 def run_scaled_dot_product_attention(
@@ -104,6 +133,11 @@ def run_scaled_dot_product_attention(
     Returns:
         Float[Tensor, " ... queries d_v"]: Output of SDPA
     """
+
+    return scaled_dot_product_attention(K, Q, V, mask)
+
+
+
     raise NotImplementedError
 
 
@@ -138,6 +172,14 @@ def run_multihead_self_attention(
         Float[Tensor, " ... sequence_length d_model"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
+
+    model = MultiheadSelfAttention(d_model, num_heads)
+    model.load_state_dict({"wq.weight":q_proj_weight, "wk.weight":k_proj_weight, "wv.weight":v_proj_weight, "wo.weight":o_proj_weight})
+    return model(in_features)
+
+    
+
+
     raise NotImplementedError
 
 
@@ -178,6 +220,11 @@ def run_multihead_self_attention_with_rope(
         Float[Tensor, " ... sequence_length d_model"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
+    model = MultiheadSelfAttention(d_model, num_heads, max_seq_len = max_seq_len, theta = theta, use_rope = True)
+    model.load_state_dict({"wq.weight":q_proj_weight, "wk.weight":k_proj_weight, "wv.weight":v_proj_weight, "wo.weight":o_proj_weight})
+    return model(in_features, token_positions)
+
+
     raise NotImplementedError
 
 
@@ -200,6 +247,12 @@ def run_rope(
     Returns:
         Float[Tensor, " ... sequence_length d_k"]: Tensor with RoPEd input.
     """
+    rope_mode = RotaryPositionalEmbedding(theta, d_k, max_seq_len)
+    return rope_mode(in_query_or_key, token_positions)
+
+
+
+
     raise NotImplementedError
 
 
@@ -378,6 +431,11 @@ def run_rmsnorm(
         Float[Tensor,"... d_model"]: Tensor of with the same shape as `in_features` with the output of running
         RMSNorm of the `in_features`.
     """
+    rmsnorm_model = RMSNorm.from_weight(weights, eps)
+    return rmsnorm_model(in_features)
+
+
+
     raise NotImplementedError
 
 
@@ -431,6 +489,10 @@ def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, "
         Float[Tensor, "..."]: Tensor of with the same shape as `in_features` with the output of
         softmax normalizing the specified `dim`.
     """
+    return softmax(in_features, dim)
+
+
+
     raise NotImplementedError
 
 
@@ -559,7 +621,8 @@ def get_tokenizer(
     Returns:
         A BPE tokenizer that uses the provided vocab, merges, and special tokens.
     """
-    raise NotImplementedError
+
+    return Tokenizer(vocab, merges, special_tokens)
 
 
 def run_train_bpe(
@@ -589,4 +652,10 @@ def run_train_bpe(
                 representing that <token1> was merged with <token2>.
                 Merges are ordered by order of creation.
     """
-    raise NotImplementedError
+
+    num_processes = 4
+    vocab, merges = train_bpe(input_path,vocab_size,special_tokens,num_processes)
+    return vocab, merges
+
+
+    # raise NotImplementedError
