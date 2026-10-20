@@ -12,14 +12,14 @@ class RMSNorm(nn.Module):
         super().__init__()
         self.eps = eps
         self.d_model = d_model
-        self.g = nn.Parameter(torch.empty([d_model], device=device, dtype=dtype))
+        self.weight = nn.Parameter(torch.empty([d_model], device=device, dtype=dtype))
 
 
     @classmethod
     def from_weight(cls, weight: torch.Tensor, eps):
         rmsnorm_model = cls(weight.shape[0],eps,weight.device,weight.dtype)
         with torch.no_grad():
-            rmsnorm_model.g.copy_(weight)
+            rmsnorm_model.weight.copy_(weight)
         return rmsnorm_model
     
 
@@ -27,7 +27,7 @@ class RMSNorm(nn.Module):
         in_type = x.dtype
         x = x.to(torch.float32)
         rms = torch.sqrt(reduce(x**2,"... d_model -> ... 1", "mean") + self.eps)
-        result = (x/rms)*self.g
+        result = (x/rms)*self.weight
         return result.to(in_type)
 
     

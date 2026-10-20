@@ -29,10 +29,10 @@ class MultiheadSelfAttention(nn.Module):
         self.use_rope = use_rope
         self.max_seq_len = max_seq_len
         self.theta = theta
-        self.wq = Linear(self.d_model, self.d_k*self.num_heads,device=device,dtype=dtype)
-        self.wk = Linear(self.d_model, self.d_k*self.num_heads,device=device,dtype=dtype)
-        self.wv = Linear(self.d_model, self.d_k*self.num_heads,device=device,dtype=dtype)
-        self.wo = Linear(self.d_k*self.num_heads, self.d_model,device=device,dtype=dtype)
+        self.q_proj = Linear(self.d_model, self.d_k*self.num_heads,device=device,dtype=dtype)
+        self.k_proj = Linear(self.d_model, self.d_k*self.num_heads,device=device,dtype=dtype)
+        self.v_proj = Linear(self.d_model, self.d_k*self.num_heads,device=device,dtype=dtype)
+        self.output_proj = Linear(self.d_k*self.num_heads, self.d_model,device=device,dtype=dtype)
         if use_rope == True:
             self.rope = RotaryPositionalEmbedding(theta, self.d_k, max_seq_len, device)
         else:
@@ -44,9 +44,9 @@ class MultiheadSelfAttention(nn.Module):
     
 
     def forward(self, x, token_positions = None):
-        Q = self.wq(x)
-        K = self.wk(x)
-        V = self.wv(x)
+        Q = self.q_proj(x)
+        K = self.k_proj(x)
+        V = self.v_proj(x)
         Q = rearrange(Q, "... t (h d) -> ... h t d", h = self.num_heads)
         K = rearrange(K, "... t (h d) -> ... h t d", h = self.num_heads)
         V = rearrange(V, "... t (h d) -> ... h t d", h = self.num_heads)
@@ -60,7 +60,7 @@ class MultiheadSelfAttention(nn.Module):
 
         out = scaled_dot_product_attention(K,Q,V,mask)
         out = rearrange(out, "... h t d -> ... t (h d)")
-        return self.wo(out)
+        return self.output_proj(out)
 
         
 

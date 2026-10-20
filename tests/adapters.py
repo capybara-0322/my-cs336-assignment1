@@ -21,6 +21,8 @@ from cs336_basics.rope import RotaryPositionalEmbedding
 from cs336_basics.softmax import softmax
 from cs336_basics.attention import scaled_dot_product_attention
 from cs336_basics.multihead_self_attention import MultiheadSelfAttention
+from cs336_basics.tranformer_block import TransformerBlock
+from cs336_basics.transformer import TransformerLM
 
 
 
@@ -107,11 +109,6 @@ def run_swiglu(
     swiglu_model.load_state_dict({"w1.weight":w1_weight, "w2.weight":w2_weight, "w3.weight":w3_weight})
 
     return swiglu_model(in_features)
-
-
-
-
-
 
 
 
@@ -326,6 +323,12 @@ def run_transformer_block(
         Float[Tensor, "batch sequence_length d_model"] Tensor with the output of
         running the Transformer block on the input features while using RoPE.
     """
+    
+    transformer_block = TransformerBlock(d_model, num_heads, d_ff, max_seq_len, theta)
+    transformer_block.load_state_dict(weights)
+    return transformer_block(in_features)
+    
+    
     raise NotImplementedError
 
 
@@ -408,6 +411,13 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
+
+    model = TransformerLM(d_model, num_heads, d_ff, context_length, rope_theta, vocab_size, num_layers)
+    model.load_state_dict(weights)
+    return model(in_indices)
+
+
+
     raise NotImplementedError
 
 
